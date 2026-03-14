@@ -1,20 +1,22 @@
 import mongoose from "mongoose";
-const stockSchema = new mongoose.Schema({
-  product: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Product"
+const stockSchema = new mongoose.Schema(
+  {
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+    },
+
+    location: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Location",
+    },
+
+    quantity: {
+      type: Number,
+      default: 0,
+    },
   },
-
-  location: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Location"
-  },
-
-  quantity: {
-    type: Number,
-    default: 0
-  }
-
-}, { timestamps: true });
+  { timestamps: true },
+);
 
 export default mongoose.model("Stock", stockSchema);

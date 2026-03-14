@@ -1,13 +1,16 @@
 import mongoose from "mongoose";
-const warehouseSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true
+const warehouseSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+    },
+
+    location: String,
+
+    description: String,
   },
-
-  location: String,
-
-  description: String
-}, { timestamps: true });
+  { timestamps: true },
+);
 
 export default mongoose.model("Warehouse", warehouseSchema);

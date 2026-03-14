@@ -11,9 +11,11 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-app.use(morgan("dev", {
-    stream: { write: (message) => logger.info(message.trim()) }
-}));
+app.use(
+  morgan("dev", {
+    stream: { write: (message) => logger.info(message.trim()) },
+  }),
+);
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 app.use("/api", apiRoutes);

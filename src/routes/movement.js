@@ -1,8 +1,12 @@
-import express from 'express';
-import { getAll, getByProduct, getByLocation } from '../controllers/movement.js';
-import { protect } from '../middleware/auth.js';
+import express from "express";
+import {
+  getAll,
+  getByProduct,
+  getByLocation,
+} from "../controllers/movement.js";
+import { protect } from "../middleware/auth.js";
 const router = express.Router();
-router.get('/', protect, getAll);
-router.get('/product/:productId', protect, getByProduct);
-router.get('/location/:locationId', protect, getByLocation);
+router.get("/", protect, getAll);
+router.get("/product/:productId", protect, getByProduct);
+router.get("/location/:locationId", protect, getByLocation);
 export default router;

@@ -1,30 +1,31 @@
 import mongoose from "mongoose";
-const deliverySchema = new mongoose.Schema({
+const deliverySchema = new mongoose.Schema(
+  {
+    customer: String,
 
-  customer: String,
+    products: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
 
-  products: [
-    {
-      product: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Product"
+        quantity: Number,
       },
+    ],
 
-      quantity: Number
-    }
-  ],
+    warehouse: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Warehouse",
+    },
 
-  warehouse: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Warehouse"
+    status: {
+      type: String,
+      enum: ["draft", "picking", "packed", "done", "cancelled"],
+      default: "draft",
+    },
   },
-
-  status: {
-    type: String,
-    enum: ["draft", "picking", "packed", "done", "cancelled"],
-    default: "draft"
-  }
-
-}, { timestamps: true });
+  { timestamps: true },
+);
 
 export default mongoose.model("Delivery", deliverySchema);
