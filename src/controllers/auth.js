@@ -4,9 +4,51 @@ import jwt from "jsonwebtoken";
 
 // Helper to generate JWT
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || "secret123", {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "30d",
   });
+};
+
+// @desc    Create a new manager account
+// @route   POST /api/auth/manager
+export const createManager = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Please provide all required fields" });
+    }
+
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: "manager",
+    });
+
+    if (user) {
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      });
+    } else {
+      res.status(400).json({ message: "Invalid user data received" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // @desc    Register new user
@@ -36,7 +78,7 @@ export const register = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: role || "staff",
+      role: "staff", // always staff via public register
     });
 
     if (user) {
@@ -107,11 +149,10 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     // Simulate sending email
-    console.log(`[SIMULATED EMAIL] Sending OTP ${otp} to ${user.email}`);
+    // console.log(`[SIMULATED EMAIL] Sending OTP to ${user.email}`);
 
     res.status(200).json({
       message: "OTP generated successfully and sent to email",
-      dev_otp: otp, // Keep for testing without email server
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

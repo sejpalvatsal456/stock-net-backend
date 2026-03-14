@@ -56,10 +56,15 @@ export const remove = async (req, res) => {
 
 export const search = async (req, res) => {
   try {
+    const q = req.query.query || "";
+    if (q.length > 100)
+      return res.status(400).json({ error: "Query too long" });
+    const safeQuery = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
     const result = await Product.find({
       $or: [
-        { name: new RegExp(req.query.query, "i") },
-        { sku: new RegExp(req.query.query, "i") },
+        { name: new RegExp(safeQuery, "i") },
+        { sku: new RegExp(safeQuery, "i") },
       ],
     }).populate("category");
     res.json(result);

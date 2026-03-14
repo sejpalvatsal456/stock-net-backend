@@ -19,4 +19,6 @@ const stockSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+stockSchema.index({ product: 1, location: 1 }, { unique: true });
+
 export default mongoose.model("Stock", stockSchema);

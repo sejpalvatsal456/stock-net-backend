@@ -12,6 +12,13 @@ const adjustmentSchema = new mongoose.Schema(
     },
 
     countedQuantity: Number,
+    newQuantity: Number,
+
+    status: {
+      type: String,
+      enum: ["draft", "done"],
+      default: "draft",
+    },
 
     reason: String,
   },

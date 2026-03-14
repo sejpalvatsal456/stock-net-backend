@@ -1,10 +1,15 @@
 import mongoose from "mongoose";
 const transferSchema = new mongoose.Schema(
   {
-    product: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-    },
+    products: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
+        quantity: Number,
+      },
+    ],
 
     fromLocation: {
       type: mongoose.Schema.Types.ObjectId,
@@ -15,8 +20,6 @@ const transferSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Location",
     },
-
-    quantity: Number,
 
     status: {
       type: String,
