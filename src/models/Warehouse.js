@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 const warehouseSchema = new mongoose.Schema({
   name: {
     type: String,

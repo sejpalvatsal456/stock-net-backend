@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 const movementSchema = new mongoose.Schema({
 
   product: {

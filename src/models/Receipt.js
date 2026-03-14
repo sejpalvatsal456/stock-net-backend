@@ -1,6 +1,7 @@
-const deliverySchema = new mongoose.Schema({
+import mongoose from "mongoose";
+const receiptSchema = new mongoose.Schema({
 
-  customer: String,
+  supplier: String,
 
   products: [
     {
@@ -20,10 +21,10 @@ const deliverySchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["draft", "picking", "packed", "done", "cancelled"],
+    enum: ["draft", "waiting", "ready", "done", "cancelled"],
     default: "draft"
   }
 
 }, { timestamps: true });
 
-export default mongoose.model("Delivery", deliverySchema);
+export default mongoose.model("Receipt", receiptSchema);

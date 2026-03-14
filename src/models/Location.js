@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 const locationSchema = new mongoose.Schema({
   warehouse: {
     type: mongoose.Schema.Types.ObjectId,
