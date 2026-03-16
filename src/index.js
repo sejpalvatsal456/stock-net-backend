@@ -8,8 +8,14 @@ import { notFound, errorHandler } from "./middleware/error.js";
 import apiRoutes from "./routes/index.js";
 
 dotenv.config();
+
+if (!process.env.JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET environment variable is not set");
+  process.exit(1);
+}
+
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
 
 app.use(
   morgan("dev", {

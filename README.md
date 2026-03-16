@@ -86,7 +86,7 @@ The API is secured using **JSON Web Tokens (JWT)**.
 2. **Token**: The server returns a JWT token.
 3. **Protected Routes**: To access secured endpoints, include the token in the request header:
    `Authorization: Bearer <token>`
-4. **Middleware**: The `protect` middleware ensures the user is logged in, while the `authorize('manager')` middleware restricts sensitive operations to managers.
+4. **Middleware**: The `protect` middleware ensures the user is logged in, while the `manager` middleware restricts sensitive operations to managers.
 
 ## 🎛 Controllers & API Endpoints
 
@@ -123,14 +123,7 @@ The system is broken down into 13 core controllers. Most follow standard RESTful
 
 ## 🧪 Testing the API
 
-For a rapid testing experience, an extensive testing suite file located at `tests/api.http` is included in the project. 
-
-### Running Tests 
-1. Install the **"REST Client"** extension in VS Code by Huachao Mao. 
-2. Open `tests/api.http`.
-3. The file is structured sequentially! Start from the top by creating a user and logging in.
-4. The REST Client will save the `{token}` variable automatically.
-5. You can execute end-to-end receipt/delivery cycles by clicking the "Send Request" inline button directly inside the editor.
+For testing the application, you can use Postman, Insomnia or VS Code's "REST Client" extension to establish testing requests matching the core endpoints described above.
 
 ### Test Workflow Example
 1. Create a Location and a Product.

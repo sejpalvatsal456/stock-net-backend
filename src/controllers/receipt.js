@@ -11,13 +11,20 @@ export const create = async (req, res) => {
   }
 };
 export const getAll = async (req, res) => {
-  try {
-    res.json(
-      await Receipt.find().populate("products.product").populate("warehouse"),
-    );
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 100;
+  const skip = (page - 1) * limit;
+
+  const [data, total] = await Promise.all([
+    Receipt.find()
+      .populate("products.product")
+      .populate("warehouse")
+      .skip(skip)
+      .limit(limit),
+    Receipt.countDocuments(),
+  ]);
+
+  res.json({ data, total, page, limit });
 };
 export const getOne = async (req, res) => {
   try {
@@ -47,55 +54,71 @@ export const remove = async (req, res) => {
   }
 };
 
+import mongoose from "mongoose";
+
 export const validate = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    const receipt = await Receipt.findById(req.params.id);
-    if (!receipt) return res.status(404).json({ message: "Receipt not found" });
-    if (receipt.status === "done")
+    const receipt = await Receipt.findById(req.params.id).session(session);
+    if (!receipt) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Receipt not found" });
+    }
+    if (receipt.status === "done") {
+      await session.abortTransaction();
       return res.status(400).json({ message: "Already validated" });
+    }
 
     let locationId;
     if (receipt.products.length > 0 && req.body.locationId) {
       locationId = req.body.locationId;
     } else {
-      const loc = await Location.findOne({ warehouse: receipt.warehouse });
-      if (!loc)
+      const loc = await Location.findOne({
+        warehouse: receipt.warehouse,
+      }).session(session);
+      if (!loc) {
+        await session.abortTransaction();
         return res
           .status(400)
           .json({ message: "No location defined for this warehouse" });
+      }
       locationId = loc._id;
     }
 
     for (let item of receipt.products) {
-      let stock = await Stock.findOne({
-        product: item.product,
-        location: locationId,
-      });
-      if (stock) {
-        stock.quantity += item.quantity;
-        await stock.save();
-      } else {
-        await Stock.create({
-          product: item.product,
-          location: locationId,
-          quantity: item.quantity,
-        });
-      }
-      await Movement.create({
-        product: item.product,
-        type: "receipt",
-        quantity: item.quantity,
-        toLocation: locationId,
-        referenceId: receipt._id,
-      });
+      // Atomic increment with upsert
+      await Stock.updateOne(
+        { product: item.product, location: locationId },
+        { $inc: { quantity: item.quantity } },
+        { session, upsert: true }
+      );
+
+      await Movement.create(
+        [
+          {
+            product: item.product,
+            type: "receipt",
+            quantity: item.quantity,
+            toLocation: locationId,
+            referenceId: receipt._id,
+          },
+        ],
+        { session },
+      );
     }
     receipt.status = "done";
-    await receipt.save();
+    await receipt.save({ session });
+    
+    await session.commitTransaction();
     res.json({
       message: "Receipt validated, stock updated successfully",
       receipt,
     });
   } catch (e) {
+    await session.abortTransaction();
     res.status(500).json({ error: e.message });
+  } finally {
+    session.endSession();
   }
 };

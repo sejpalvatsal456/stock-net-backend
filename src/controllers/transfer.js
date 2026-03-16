@@ -10,16 +10,21 @@ export const create = async (req, res) => {
   }
 };
 export const getAll = async (req, res) => {
-  try {
-    res.json(
-      await Transfer.find()
-        .populate("products.product")
-        .populate("fromLocation")
-        .populate("toLocation"),
-    );
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 100;
+  const skip = (page - 1) * limit;
+
+  const [data, total] = await Promise.all([
+    Transfer.find()
+      .populate("products.product")
+      .populate("fromLocation")
+      .populate("toLocation")
+      .skip(skip)
+      .limit(limit),
+    Transfer.countDocuments(),
+  ]);
+
+  res.json({ data, total, page, limit });
 };
 export const getOne = async (req, res) => {
   try {
@@ -50,66 +55,72 @@ export const remove = async (req, res) => {
   }
 };
 
-export const validate = async (req, res) => {
-  try {
-    const transfer = await Transfer.findById(req.params.id);
-    if (!transfer)
-      return res.status(404).json({ message: "Transfer not found" });
-    if (transfer.status === "done")
-      return res.status(400).json({ message: "Already validated" });
+import mongoose from "mongoose";
 
-    for (let item of transfer.products) {
-      let stock = await Stock.findOne({
-        product: item.product,
-        location: transfer.fromLocation,
-      });
-      if (!stock || stock.quantity < item.quantity) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "Insufficient stock in source location for product " +
-              item.product,
-          });
-      }
+export const validate = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const transfer = await Transfer.findById(req.params.id).session(session);
+    if (!transfer) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Transfer not found" });
+    }
+    if (transfer.status === "done") {
+      await session.abortTransaction();
+      return res.status(400).json({ message: "Already validated" });
     }
 
     for (let item of transfer.products) {
-      let sourceStock = await Stock.findOne({
-        product: item.product,
-        location: transfer.fromLocation,
-      });
-      sourceStock.quantity -= item.quantity;
-      await sourceStock.save();
-
-      let destStock = await Stock.findOne({
-        product: item.product,
-        location: transfer.toLocation,
-      });
-      if (destStock) {
-        destStock.quantity += item.quantity;
-        await destStock.save();
-      } else {
-        await Stock.create({
-          product: item.product,
-          location: transfer.toLocation,
-          quantity: item.quantity,
+      // Atomic source decrement
+      const sourceResult = await Stock.updateOne(
+        { 
+          product: item.product, 
+          location: transfer.fromLocation,
+          quantity: { $gte: item.quantity }
+        },
+        { $inc: { quantity: -item.quantity } },
+        { session }
+      );
+      
+      if (sourceResult.modifiedCount === 0) {
+        await session.abortTransaction();
+        return res.status(400).json({
+          message:
+            "Insufficient stock in source location or concurrency conflict for product " + item.product,
         });
       }
 
-      await Movement.create({
-        product: item.product,
-        type: "transfer",
-        quantity: item.quantity,
-        fromLocation: transfer.fromLocation,
-        toLocation: transfer.toLocation,
-        referenceId: transfer._id,
-      });
+      // Atomic dest increment with upsert
+      await Stock.updateOne(
+        { product: item.product, location: transfer.toLocation },
+        { $inc: { quantity: item.quantity } },
+        { session, upsert: true }
+      );
+
+      await Movement.create(
+        [
+          {
+            product: item.product,
+            type: "transfer",
+            quantity: item.quantity,
+            fromLocation: transfer.fromLocation,
+            toLocation: transfer.toLocation,
+            referenceId: transfer._id,
+          },
+        ],
+        { session },
+      );
     }
     transfer.status = "done";
-    await transfer.save();
+    await transfer.save({ session });
+    
+    await session.commitTransaction();
     res.json({ message: "Transfer successful", transfer });
   } catch (e) {
+    await session.abortTransaction();
     res.status(500).json({ error: e.message });
+  } finally {
+    session.endSession();
   }
 };
