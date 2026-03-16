@@ -2,16 +2,13 @@ import User from "../models/User.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-// Helper to generate JWT
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "30d",
   });
 };
 
-// @desc    Create a new manager account
-// @route   POST /api/auth/manager
-export const createManager = async (req, res) => {
+export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
@@ -33,52 +30,7 @@ export const createManager = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: "manager",
-    });
-
-    if (user) {
-      res.status(201).json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      });
-    } else {
-      res.status(400).json({ message: "Invalid user data received" });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// @desc    Register new user
-// @route   POST /api/auth/register
-export const register = async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
-
-    if (!name || !email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Please provide all required fields" });
-    }
-
-    // Check if user exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create user
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role: "staff", // always staff via public register
+      role: "staff",
     });
 
     if (user) {
@@ -97,8 +49,6 @@ export const register = async (req, res) => {
   }
 };
 
-// @desc    Login user
-// @route   POST /api/auth/login
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -127,8 +77,6 @@ export const login = async (req, res) => {
   }
 };
 
-// @desc    Forgot password / Send OTP
-// @route   POST /api/auth/forgot-password
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -136,31 +84,26 @@ export const forgotPassword = async (req, res) => {
 
     if (!user) {
       return res
-        .status(404)
-        .json({ message: "User with that email does not exist" });
+        .status(200)
+        .json({ message: "If that email is registered, an OTP has been sent" });
     }
 
-    // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Set expiry to 15 minutes from now
     user.otp = otp;
     user.otpExpiry = Date.now() + 15 * 60 * 1000;
     await user.save();
 
-    // Simulate sending email
-    // console.log(`[SIMULATED EMAIL] Sending OTP to ${user.email}`);
+    console.log(`[SIMULATED EMAIL] Sending OTP ${otp} to ${user.email}`);
 
     res.status(200).json({
-      message: "OTP generated successfully and sent to email",
+      message: "If that email is registered, an OTP has been sent",
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Reset password using OTP
-// @route   POST /api/auth/reset-password
 export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
@@ -185,11 +128,9 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({ message: "OTP has expired" });
     }
 
-    // Hash new password
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
 
-    // Clear OTP fields
     user.otp = undefined;
     user.otpExpiry = undefined;
 
@@ -203,8 +144,6 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-// @desc    Get currently logged in user profile
-// @route   GET /api/auth/me
 export const getMe = async (req, res) => {
   try {
     if (!req.user) {

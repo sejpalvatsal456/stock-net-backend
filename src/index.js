@@ -10,12 +10,12 @@ import apiRoutes from "./routes/index.js";
 dotenv.config();
 
 if (!process.env.JWT_SECRET) {
-  logger.error("FATAL ERROR: JWT_SECRET is not defined.");
+  console.error("FATAL: JWT_SECRET environment variable is not set");
   process.exit(1);
 }
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
 
 app.use(
   morgan("dev", {

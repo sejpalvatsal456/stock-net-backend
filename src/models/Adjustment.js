@@ -11,16 +11,15 @@ const adjustmentSchema = new mongoose.Schema(
       ref: "Location",
     },
 
-    countedQuantity: Number,
     newQuantity: Number,
+
+    reason: String,
 
     status: {
       type: String,
       enum: ["draft", "done"],
       default: "draft",
     },
-
-    reason: String,
   },
   { timestamps: true },
 );
